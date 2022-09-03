@@ -187,7 +187,6 @@ def create_csv_data():
 
         write_file_seed.write(string_file_to_write_seed)
         for k, v in res.items():
-        # for k in res:
 
             if seed in v['mature3p'] or seed in v['mature5p']:
                 if seed in v['mature3p']:
