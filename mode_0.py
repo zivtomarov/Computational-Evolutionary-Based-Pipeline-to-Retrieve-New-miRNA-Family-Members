@@ -8,6 +8,9 @@ from subprocess import Popen
 import pandas as pd
 from difflib import SequenceMatcher
 import time
+import subprocess
+from io import StringIO
+
 
 # GAGGUAG - let7 seed
 # CACCGGG - mir35 seed
@@ -97,32 +100,32 @@ def ct_file_parser_3p_check(ct_df, start_mature, end_mature, param=30):
     if start_hairpin > end_mature or start_hairpin > param:
         valid = False
 
-    if decreased_end_mature:
         if decreased_start_mature:
             if direct:
-                return {'start_hairpin': max(0, start_hairpin - repair_index_end_mature), 'end_hairpin': end_mature - 1,
-                        'start_star': max(0, start_hairpin - repair_index_start_star + 2),
+                return {'start_hairpin': max(0, start_hairpin - repair_index_end_mature) + 2,
+                        'end_hairpin': end_mature - 1,
+                        'start_star': max(0, start_hairpin - repair_index_start_star) + 2,
                         'end_star': end_star_direct, 'valid': valid}
-            return {'start_hairpin': max(0, start_hairpin - repair_index_end_mature), 'end_hairpin': end_mature - 1,
-                    'start_star': max(0, start_hairpin - repair_index_start_star + 2),
+            return {'start_hairpin': max(0, start_hairpin - repair_index_end_mature) + 2, 'end_hairpin': end_mature - 1,
+                    'start_star': max(0, start_hairpin - repair_index_start_star) + 2,
                     'end_star': end_star_undirect + repair_index_start_mature + 2, 'valid': valid}
         if direct:
-            return {'start_hairpin': max(0, start_hairpin - repair_index_end_mature), 'end_hairpin': end_mature - 1,
+            return {'start_hairpin': max(0, start_hairpin - repair_index_end_mature) + 2, 'end_hairpin': end_mature - 1,
                     'start_star': max(0, start_hairpin - repair_index_start_star + 2),
                     'end_star': end_star_direct, 'valid': valid}
-        return {'start_hairpin': max(0, start_hairpin - repair_index_end_mature), 'end_hairpin': end_mature - 1,
+        return {'start_hairpin': max(0, start_hairpin - repair_index_end_mature) + 2, 'end_hairpin': end_mature - 1,
                 'start_star': max(0, start_hairpin - repair_index_start_star + 2),
                 'end_star': end_star_undirect + 2, 'valid': valid}
     if decreased_start_mature:
         if direct:
-            return {'start_hairpin': start_hairpin, 'end_hairpin': end_mature - 1,
-                    'start_star': max(0, start_hairpin - repair_index_start_star + 2),
+            return {'start_hairpin': start_hairpin + 2, 'end_hairpin': end_mature - 1,
+                    'start_star': max(0, start_hairpin - repair_index_start_star) + 2,
                     'end_star': end_star_direct, 'valid': valid}
-        return {'start_hairpin': start_hairpin, 'end_hairpin': end_mature - 1,
-                'start_star': max(0, start_hairpin - repair_index_start_star + 2),
+        return {'start_hairpin': start_hairpin + 2, 'end_hairpin': end_mature - 1,
+                'start_star': max(0, start_hairpin - repair_index_start_star) + 2,
                 'end_star': end_star_undirect + 2, 'valid': valid}
     if direct:
-        return {'start_hairpin': start_hairpin, 'end_hairpin': end_mature - 1, 'start_star': start_hairpin + 2,
+        return {'start_hairpin': start_hairpin + 2, 'end_hairpin': end_mature - 1, 'start_star': start_hairpin + 2,
                 'end_star': end_star_direct, 'valid': valid}
     return {'start_hairpin': start_hairpin, 'end_hairpin': end_mature - 1, 'start_star': start_hairpin + 2,
             'end_star': end_star_undirect + 2, 'valid': valid}
@@ -168,30 +171,31 @@ def ct_file_parser_5p_check(ct_df, start_mature, end_mature, param):
         if increased_end_mature:
             if direct:
                 return {'start_hairpin': start_mature - 1,
-                        'end_hairpin': min(len(ct_df), end_hairpin + repair_index_start_mature),
+                        'end_hairpin': min(len(ct_df), end_hairpin + repair_index_start_mature) + 2,
                         'start_star': start_star_direct,
-                        'end_star': min(len(ct_df), end_hairpin + repair_index_end_star + 2), 'valid': valid}
+                        'end_star': min(len(ct_df), end_hairpin + repair_index_end_star) + 2, 'valid': valid}
             return {'start_hairpin': start_mature - 1,
                     'end_hairpin': min(len(ct_df), end_hairpin + repair_index_start_mature),
                     'start_star': start_star_undirect - repair_index_end_mature + 2,
-                    'end_star': min(len(ct_df), end_hairpin + repair_index_end_star + 2), 'valid': valid}
+                    'end_star': min(len(ct_df), end_hairpin + repair_index_end_star) + 2, 'valid': valid}
         if direct:
             return {'start_hairpin': start_mature - 1,
-                    'end_hairpin': min(len(ct_df), end_hairpin + repair_index_start_mature),
+                    'end_hairpin': min(len(ct_df), end_hairpin + repair_index_start_mature) + 2,
                     'start_star': start_star_direct,
-                    'end_star': min(len(ct_df), end_hairpin + repair_index_end_star + 2), 'valid': valid}
+                    'end_star': min(len(ct_df), end_hairpin + repair_index_end_star) + 2, 'valid': valid}
         return {'start_hairpin': start_mature - 1,
-                'end_hairpin': min(len(ct_df), end_hairpin + repair_index_start_mature),
+                'end_hairpin': min(len(ct_df), end_hairpin + repair_index_start_mature) + 2,
                 'start_star': start_star_undirect + 2,
-                'end_star': min(len(ct_df), end_hairpin + repair_index_end_star + 2), 'valid': valid}
+                'end_star': min(len(ct_df), end_hairpin + repair_index_end_star) + 2, 'valid': valid}
     if increased_end_mature:
         if direct:
             return {'start_hairpin': start_mature - 1,
-                    'end_hairpin': min(len(ct_df), end_hairpin + repair_index_start_mature),
+                    'end_hairpin': min(len(ct_df), end_hairpin + repair_index_start_mature) + 2,
                     'start_star': start_star_direct, 'end_star': end_hairpin + 2, 'valid': valid}
         return {'start_hairpin': start_mature - 1,
-                'end_hairpin': min(len(ct_df), end_hairpin + repair_index_start_mature),
-                'start_star': start_star_undirect - repair_index_end_mature + 2, 'end_star': end_hairpin + 2, 'valid': valid}
+                'end_hairpin': min(len(ct_df), end_hairpin + repair_index_start_mature) + 2,
+                'start_star': start_star_undirect - repair_index_end_mature + 2, 'end_star': end_hairpin + 2,
+                'valid': valid}
     if direct:
         return {'start_hairpin': start_mature - 1, 'end_hairpin': end_hairpin, 'start_star': start_star_direct,
                 'end_star': end_hairpin + 2, 'valid': valid}
@@ -258,7 +262,8 @@ def create_csv_data():
         string_file_to_write_seed = "ID,Organism,Hairpin_name,Hairpin_seq,Hairpin_seq_trimmed," \
                                     "Hairpin_seq_trimmed_length,Fold," \
                                     "Energy,Mature,Mature_connections,Mature_BP_ratio,Mature_max_bulge,Loop_length,Star," \
-                                    "Star_length,Star_connections,Star_BP_ratio,Star_max_bulge,Max_bulge_symmetry,5p/3p" + '\n'
+                                    "Star_length,Star_connections,Star_BP_ratio,Star_max_bulge,Max_bulge_symmetry,Max_one_mer_mature,"\
+                                    "Max_two_mer_mature,Max_one_mer_hairpin,Max_two_mer_hairpin,5p/3p" + '\n'
 
         records_dict_mature = list(SeqIO.parse(matureFile, "fasta"))
         records_dict_hairpin = list(SeqIO.parse(hairpinFile, "fasta"))
@@ -337,18 +342,30 @@ def create_csv_data():
                 else:
                     if seed != v['mature5p'][1:8]:
                         continue
-                with open('ct.txt', 'w') as infile:
-                    infile.write('>' + str(k) + '\n')
-                    infile.write(v['hairpin'] + '\n')
-                    infile.write(v['fold'])
+                # with open('ct.txt', 'w') as infile:
+                #     infile.write('>' + str(k) + '\n')
+                #     infile.write(v['hairpin'] + '\n')
+                #     infile.write(v['fold'])
+                #
+                # cmd = "RNAfold --noPS ct.txt | b2ct > ct_file.ct"
+                # p = Popen(cmd, shell=True)
+                # p.communicate()
 
-                cmd = "RNAfold --noPS ct.txt | b2ct > ct_file.ct"
-                p = Popen(cmd, shell=True)
-                p.communicate()
+                ct_fold = v['fold']
+                ct_hairpin = v['hairpin']
+                ct_data = f'>{key}\n{ct_hairpin}\n{ct_fold}'
+                cmd = "RNAfold --noPS | b2ct"
+                p = subprocess.run(cmd, shell=True, input=ct_data, universal_newlines=True, stdout=subprocess.PIPE,
+                                   stderr=subprocess.PIPE)
+                out, err = p.stdout, p.stderr
 
-                ct_df = pd.read_csv('ct_file.ct', delimiter='\s+', header=None, names=[0, 1, 2, 3, 4, 5])
-                ct_df = ct_df.iloc[1:]
-                ct_df.astype({4: 'int'}).dtypes
+
+                # ct_df = pd.read_csv('ct_file.ct', delimiter='\s+', header=None, names=[0, 1, 2, 3, 4, 5])
+                ct_df = pd.read_csv(StringIO(out), delimiter='\s+', header=None, names=[0, 1, 2, 3, 4, 5])[1:]
+                ct_df = ct_df.astype({4: 'int'})
+
+                # ct_df = ct_df.iloc[1:]
+                # ct_df.astype({4: 'int'}).dtypes
 
                 # find indexes of the seed, mature, and hairpin
                 start_seed, end_seed = find_seed(seed, v['hairpin'])
@@ -401,7 +418,7 @@ def create_csv_data():
 
                 ###############################################################
                 if seed in v['mature3p']:
-                    hairpin_boundries = ct_file_parser_3p_check(ct_df, start_mature, end_mature, 35)
+                    hairpin_boundries = ct_file_parser_3p_check(ct_df, start_mature, end_mature, 30)
                     # start_star = hairpin_boundries['start_star']
                     # end_star = hairpin_boundries['end_star']
                     # star_length = end_star - start_star + 1
@@ -413,7 +430,7 @@ def create_csv_data():
                     mature_3p = True
 
                 else:
-                    hairpin_boundries = ct_file_parser_5p_check(ct_df, start_mature, end_mature, 35)
+                    hairpin_boundries = ct_file_parser_5p_check(ct_df, start_mature, end_mature, 30)
                     # start_star = hairpin_boundries['start_star']
                     # end_star = hairpin_boundries['end_star']
                     # star_length = end_star - start_star + 1
@@ -426,7 +443,7 @@ def create_csv_data():
 
                 if hairpin_boundries['valid'] is False:
                     # del res[key]
-                    print("not valid")
+                    # print("not valid")
                     continue
 
                 start_star = hairpin_boundries['start_star']
@@ -460,6 +477,12 @@ def create_csv_data():
                 loop_size = end_loop - start_loop
                 fold_and_energy = RNA.fold(cutted_hairpin)
 
+                max_one_mer_mature = count_kmers(mature, 1) / len(mature)
+                max_two_mer_mature = count_kmers(mature, 2) / len(mature)
+                max_one_mer_hairpin = count_kmers(cutted_hairpin, 1) / len(cutted_hairpin)
+                max_two_mer_hairpin = count_kmers(cutted_hairpin, 2) / len(cutted_hairpin)
+
+
 
                 if mature_3p:
                     write_file_seed.write(
@@ -468,7 +491,8 @@ def create_csv_data():
                         mature + "," + str(mature_numbers_of_connections) + "," + str(mature_bp_ratio) + "," +
                         str(mature_max_bulge) + "," + str(loop_size) + "," + star + "," + str(star_length) + "," +
                         str(star_numbers_of_connections) + "," + str(star_bp_ratio) + "," + str(star_max_bulge) + "," +
-                        str(max_bulge_symmetry) + "," + "3p"'\n')
+                        str(max_bulge_symmetry) + "," + str(max_one_mer_mature) + "," + str(max_two_mer_mature) + "," +
+                        str(max_one_mer_hairpin) + "," + str(max_two_mer_hairpin) + "," + "3p"'\n')
                 elif mature_5p:
                     write_file_seed.write(
                         str(i) + "," + v['organism'] + "," + k + "," + v['hairpin'] + "," + cutted_hairpin + "," +
@@ -476,7 +500,8 @@ def create_csv_data():
                         mature + "," + str(mature_numbers_of_connections) + "," + str(mature_bp_ratio) + "," +
                         str(mature_max_bulge) + "," + str(loop_size) + "," + star + "," + str(star_length) + "," +
                         str(star_numbers_of_connections) + "," + str(star_bp_ratio) + "," + str(star_max_bulge) + "," +
-                        str(max_bulge_symmetry) + "," + "5p"'\n')
+                        str(max_bulge_symmetry) + "," + str(max_one_mer_mature) + "," + str(max_two_mer_mature) + "," +
+                        str(max_one_mer_hairpin) + "," + str(max_two_mer_hairpin) + "," +"5p"'\n')
 
             i = i + 1
         write_file_seed.close()
@@ -496,9 +521,7 @@ def find_seed(seed, seq):
 def find_max_bulge_symmetry(mature_df):
 
     mature_i = 0
-    mature_j = 0
     star_i = 0
-    star_j = 0
     max_bulge_symmetry = 0
     seen_bulge = False
 
@@ -511,9 +534,9 @@ def find_max_bulge_symmetry(mature_df):
         else:
             break
 
-    for index, row in enumerate(mature_df.values):
-        if index < counter:
-            continue
+    for index, row in enumerate(mature_df.values[counter:]):
+        # if index < counter:
+        #     continue
         if int(row[4]) == 0 and not seen_bulge:
             seen_bulge = True
             mature_i = row[0] - 1  # start of bulge
@@ -547,12 +570,6 @@ def mature_complimentarity(mature_df):
     max_bulge = 0
     count_bulge = 0
     mature_connections = 0
-    # for index, row in mature_df.iterrows():
-    #     if int(row[4]) != 0:
-    #         # check only connection outside mature
-    #         if mature_df[0].iloc[0] <= int(row[4]) <= mature_df[0].iloc[len(mature_df) - 1]:
-    #             continue
-    #         mature_connections += 1
     for row in mature_df.values:
         if int(row[4]) != 0:
             if mature_df[0].iloc[0] <= int(row[4]) <= mature_df[0].iloc[len(mature_df) - 1]:  # check only connection outside mature
@@ -560,8 +577,9 @@ def mature_complimentarity(mature_df):
             mature_connections += 1
 
             if bulge_flag:
-                if max_bulge < count_bulge:
-                    max_bulge = count_bulge
+                max_bulge = max(max_bulge, count_bulge)
+                # if max_bulge < count_bulge:
+                #     max_bulge = count_bulge
                 count_bulge = 0
                 bulge_flag = False
         else:
@@ -579,15 +597,16 @@ def star_complimentarity(star_df):
     count_bulge = 0
     star_connections = 0
     for row in star_df.values:
-        if int(row[4]) != 0:
+        if row[4] != 0:
             # check only connection outside star
             if star_df[0].iloc[0] <= int(row[4]) <= star_df[0].iloc[len(star_df) - 1]:
                 continue
             star_connections += 1
 
             if bulge_flag:
-                if max_bulge < count_bulge:
-                    max_bulge = count_bulge
+                max_bulge = max(max_bulge, count_bulge)
+                # if max_bulge < count_bulge:
+                #     max_bulge = count_bulge
                 count_bulge = 0
                 bulge_flag = False
         else:
@@ -595,6 +614,40 @@ def star_complimentarity(star_df):
             bulge_flag = True
 
     return star_connections, max_bulge
+
+
+def count_kmers(sequence, k):
+    """Count kmer occurrences in a given sequence.
+
+    Parameters
+    ----------
+    read : string
+        A single DNA sequence.
+    k : int
+        The value of k for which to count kmers.
+
+    Returns
+    -------
+    counts : dictionary, {'string': int}
+        A dictionary of counts keyed by their individual kmers (strings
+        of length k).
+
+    """
+    # Start with an empty dictionary
+    counts = {}
+    # Calculate how many kmers of length k there are
+    num_kmers = len(sequence) - k + 1
+    # Loop over the kmer start positions
+    for i in range(num_kmers):
+        # Slice the string to get the kmer
+        kmer = sequence[i:i+k]
+        # Add the kmer to the dictionary if it's not there
+        if kmer not in counts:
+            counts[kmer] = 0
+        # Increment the count for this kmer
+        counts[kmer] += 1
+    # Return the final counts
+    return max(counts.values())
 
 
 
@@ -622,10 +675,16 @@ def get_optimal_parameters(organism_list=None, positive_db_csv=None):
     min_star_bp_ratio = float("{:.2f}".format(df["Star_BP_ratio"].min()))
     max_star_bp_ratio = float("{:.2f}".format(df["Star_BP_ratio"].max()))
     min_trimmed_hairpin_length = float("{:.2f}".format(df["Hairpin_seq_trimmed_length"].min()))
+
     max_trimmed_hairpin_length = float("{:.2f}".format(df["Hairpin_seq_trimmed_length"].max()))
     max_mature_bulge = float("{:.2f}".format(df["Mature_max_bulge"].max()))
     max_star_bulge = float("{:.2f}".format(df["Star_max_bulge"].max()))
     max_bulge_symmetry = float("{:.2f}".format(df["Max_bulge_symmetry"].max()))
+
+    max_one_mer_mature = float("{:.2f}".format(df["Max_one_mer_mature"].max()))
+    max_two_mer_mature = float("{:.2f}".format(df["Max_two_mer_mature"].max()))
+    max_one_mer_hairpin = float("{:.2f}".format(df["Max_one_mer_hairpin"].max()))
+    max_two_mer_hairpin = float("{:.2f}".format(df["Max_two_mer_hairpin"].max()))
 
     dict_params = {'min_energy': min_energy, 'max_energy': max_energy,  'min_star_length': min_star_length,
                    'max_star_length': max_star_length, 'min_loop_length': min_loop_length,
@@ -633,11 +692,30 @@ def get_optimal_parameters(organism_list=None, positive_db_csv=None):
                    'max_mature_bp_ratio': max_mature_bp_ratio, 'min_star_bp_ratio': min_star_bp_ratio,
                    'max_star_bp_ratio': max_star_bp_ratio, 'min_trimmed_hairpin_length': min_trimmed_hairpin_length,
                    'max_trimmed_hairpin_length': max_trimmed_hairpin_length, 'max_mature_bulge': max_mature_bulge,
-                   'max_star_bulge': max_star_bulge, "max_bulge_symmetry": max_bulge_symmetry}
+                   'max_star_bulge': max_star_bulge, "max_bulge_symmetry": max_bulge_symmetry,
+                   'max_one_mer_mature': max_one_mer_mature, 'max_two_mer_mature': max_two_mer_mature,
+                   'max_one_mer_hairpin': max_one_mer_hairpin, 'max_two_mer_hairpin': max_two_mer_hairpin}
 
     f = open(output_filter_parameters, 'w')
     f.write(str(dict_params))
     f.close()
+
+    # check and write to csv the ranges for the filter features for each organism from the nematodes list
+    filter_features_ranges = df.groupby('Organism').agg({'Energy': ['mean', 'min', 'max'],
+                                                         'Star_length': ['mean', 'min', 'max'],
+                                                         'Loop_length': ['mean', 'min', 'max'],
+                                                         'Mature_BP_ratio': ['mean', 'min', 'max'],
+                                                         'Star_BP_ratio': ['mean', 'min', 'max'],
+                                                         'Hairpin_seq_trimmed_length': ['mean', 'min', 'max'],
+                                                         'Mature_max_bulge': ['mean', 'min', 'max'],
+                                                         'Star_max_bulge': ['mean', 'min', 'max'],
+                                                         'Max_bulge_symmetry': ['mean', 'min', 'max'],
+                                                         'Max_one_mer_mature': ['mean', 'min', 'max'],
+                                                         'Max_two_mer_mature': ['mean', 'min', 'max'],
+                                                         'Max_one_mer_hairpin': ['mean', 'min', 'max'],
+                                                         'Max_two_mer_hairpin': ['mean', 'min', 'max']})
+
+    filter_features_ranges.to_csv("filter_features_ranges.csv")
 
     return dict_params
 

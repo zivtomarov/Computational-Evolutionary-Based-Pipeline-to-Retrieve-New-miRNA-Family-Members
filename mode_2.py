@@ -297,6 +297,10 @@ def align_files(file_1, file_2, name_organism_1, name_organism_2, percentile_fil
     if settings.has_option('mode_2', 'gap_score_mature'):
         gap_score_mature = int(settings.get('mode_2', 'gap_score_mature'))
 
+    if settings.has_option('mode_2', 'allow_5p_3p_connection'):
+        allow_5p_3p_connection = settings.get('mode_2', 'allow_5p_3p_connection')
+
+
     temp_results = []
 
     join_by = ","
@@ -314,8 +318,8 @@ def align_files(file_1, file_2, name_organism_1, name_organism_2, percentile_fil
     df1 = pd.read_csv(file_1, usecols=req_col)  # df1 = pd.read_csv(dirpath + "/" + file_1)
     df2 = pd.read_csv(file_2, usecols=req_col)
     i = 0
-    print("df1 len : ", len(df1))
-    print("df2 len : ", len(df2))
+    # print("df1 len : ", len(df1))
+    # print("df2 len : ", len(df2))
 
     # with open('temp_csv_file.csv', "w") as f:
     #     writer = csv.writer(f)
@@ -334,22 +338,27 @@ def align_files(file_1, file_2, name_organism_1, name_organism_2, percentile_fil
     aligner.gap_score = gap_score_mature
 
     for line_f1 in df1.itertuples(name=None):
-        if i % 100 == 0:
-            print(i)
+        # if i % 100 == 0:
+            # print(i)
         i += 1
         for line_f2 in df2.itertuples(name=None):
 
-            # at the pairs of the same organism don't take organism x with organism x
+            # at the pairs of the same organism don't take the candidate vs itself
             if name_organism_1 == name_organism_2 and line_f1[1] == line_f2[1]:
                 continue
-            if not pd.isnull(line_f1[2]):
-                mature_1 = line_f1[2]
-            else:
-                mature_1 = line_f1[3]
-            if not pd.isnull(line_f2[2]):
-                mature_2 = line_f2[2]
-            else:
-                mature_2 = line_f2[3]
+            # if user doesnt allow connection between 3p and 5p - ignore pairs that one from 3p and tht other from 5p
+            if allow_5p_3p_connection == 'False':
+                if line_f1[3] != line_f2[3]:
+                    continue
+
+            # if not pd.isnull(line_f1[2]):
+            mature_1 = line_f1[2]
+            # else:
+            #     mature_1 = line_f1[3]
+            # if not pd.isnull(line_f2[2]):
+            mature_2 = line_f2[2]
+            # else:
+            #     mature_2 = line_f2[3]
 
             index_1 = line_f1[1]  # index_id
             index_2 = line_f2[1]  # index_id
@@ -385,13 +394,13 @@ def align_files(file_1, file_2, name_organism_1, name_organism_2, percentile_fil
             df2.drop(df2.index[0], inplace=True)
 
 
-    print("finished long loop")
+    # print("finished long loop")
 
     # algorithm for percentile with percentile only
 
     if kth_score_mark > 0:
         ind = [index for index, item in enumerate(array) if item != 0][-3]
-        print("cutoff score {} for k largest number".format(ind))
+        # print("cutoff score {} for k largest number".format(ind))
         results = []
         for i in temp_results:
             if i[3] >= ind:  # results by mature score
@@ -401,7 +410,7 @@ def align_files(file_1, file_2, name_organism_1, name_organism_2, percentile_fil
         if value_filter == 0:
             sum_array = sum(array)
             index_percentile = find_cut_off(array, sum_array, percentile_filter_percentage)  # final cut off value represents the 95% top scores (95th percentile)
-            print("cutoff score {} for percentile {}".format(index_percentile, percentile_filter_percentage))
+            # print("cutoff score {} for percentile {}".format(index_percentile, percentile_filter_percentage))
 
 
             results = []
@@ -459,11 +468,11 @@ def align_files(file_1, file_2, name_organism_1, name_organism_2, percentile_fil
             if i[3] >= score:  # results by mature score
                 elbow_point_results.append(i)
 
-        print("potential number of candidates : ", sum(array))
-        print("number of candidates filtered by percentile : ", len(results))
-        print("number of candidates filtered by elbow: ", len(elbow_point_results))
-        print("cutoff score {} for elbow point".format(score))
-
+        # print("potential number of candidates : ", sum(array))
+        # print("number of candidates filtered by percentile : ", len(results))
+        # print("number of candidates filtered by elbow: ", len(elbow_point_results))
+        # print("cutoff score {} for elbow point".format(score))
+        print(len(elbow_point_results), str(score) + '+', )
 
         # gather all data from dataframes in the memory - df1 & df2
         final_results = []
@@ -516,8 +525,8 @@ def align_files(file_1, file_2, name_organism_1, name_organism_2, percentile_fil
 
     else:
         # results = sorted(results, key=itemgetter(11), reverse=True)  # sort results by homology
-        print("potential number of candidates : ", sum(array))
-        print("number of candidates filtered: ", len(results))
+        # print("potential number of candidates : ", sum(array))
+        # print("number of candidates filtered: ", len(results))
 
         # gather all data from dataframes in the memory - df1 & df2
         final_results = []
@@ -578,8 +587,9 @@ def align_files(file_1, file_2, name_organism_1, name_organism_2, percentile_fil
                            found_in_DB_2, alignment_mature, score_mature, score_hairpin]
                 final_results.append(newline)
 
+        print(len(final_results), str(22), )
 
-        print("number of candidates after hairpin filtered: ", len(final_results))
+        # print("number of candidates after hairpin filtered: ", len(final_results))
         create_html_and_csv_file(final_results, res_file_name)
 
 
@@ -604,9 +614,9 @@ def find_number_of_orgs(file_1, file_2, organism_file_1, organism_file_2):
     df = pd.read_csv(file_1, usecols=req_col)  # df1 = pd.read_csv(dirpath + "/" + file_1)
     counter_org_1 = 0
     counter_pos_org_1 = 0
-    print("-----------------------------------------------")
-    print("running over :", organism_file_1)
-    print("candidates :", len(df))
+    # print("-----------------------------------------------")
+    # print("running over :", organism_file_1)
+    # print("candidates :", len(df))
     unique_set = df_mode_2['index_1'].unique()
     for line in df.itertuples(name=None):
         if line[1] in unique_set:
@@ -617,8 +627,8 @@ def find_number_of_orgs(file_1, file_2, organism_file_1, organism_file_2):
 
     df = pd.read_csv(file_2, usecols=req_col)  # df1 = pd.read_csv(dirpath + "/" + file_1)
 
-    print("running over :", organism_file_2)
-    print("candidates :", len(df))
+    # print("running over :", organism_file_2)
+    # print("candidates :", len(df))
     counter_org_2 = 0
     counter_pos_org_2 = 0
     unique_set = df_mode_2['index_2'].unique()
@@ -628,8 +638,10 @@ def find_number_of_orgs(file_1, file_2, organism_file_1, organism_file_2):
             if not pd.isnull(line[2]):
                 counter_pos_org_2 += 1
 
-    print("organism : {}, numer of candidates : {}, number of positive {}".format(organism_file_1,counter_org_1,counter_pos_org_1))
-    print("organism : {}, numer of candidates : {}, number of positive {}".format(organism_file_2,counter_org_2,counter_pos_org_2))
+    # print("organism : {}, numer of candidates : {}, number of positive {}".format(organism_file_1,counter_org_1,counter_pos_org_1))
+    # print("organism : {}, numer of candidates : {}, number of positive {}".format(organism_file_2,counter_org_2,counter_pos_org_2))
+    print(f"({counter_pos_org_1},{counter_pos_org_2})")
+    print('---------------------------------------------')
 
 
 # find_number_of_orgs(file_1, file_2, organism_file_1, organism_file_2)
@@ -637,24 +649,36 @@ def find_number_of_orgs(file_1, file_2, organism_file_1, organism_file_2):
 
 # Count 5p and 3p from csv output files from mode 1
 # read settings file
-settings = configparser.ConfigParser()
-settings._interpolation = configparser.ExtendedInterpolation()
-settings.read('settings.ini')
 
-def counter_report(csv_file):
-    df = pd.read_csv(csv_file)
-    ser = df['3p/5p'].value_counts()
-    return {'3p': ser['3p'], '5p': ser['5p']}
+# settings = configparser.ConfigParser()
+# settings._interpolation = configparser.ExtendedInterpolation()
+# settings.read('settings.ini')
 
+# def counter_report(csv_file):
+#     df = pd.read_csv(csv_file)
+#     ser = df['3p/5p'].value_counts()
+#     return {'3p': ser['3p'], '5p': ser['5p']}
+#
+#
+# if settings.has_option('mode_4', 'dir_pairs_path'):
+#     dir_result_mode2_path = settings.get('mode_4', 'dir_pairs_path')
+#
+# # go over all files in mode1 to get the 3p and 5p candidates
+# for dirpath, dirs, files in os.walk(dir_result_mode2_path):
+#     for fname in files:
+#         file_name = os.path.join(dirpath,fname)
+#         if file_name.endswith('.csv'):
+#             # file_name = 'result_files_mode1_mir35/results_caenorhabditis_briggsae.csv'
+#             print('file_name {} report counter {}'.format(file_name, counter_report(file_name)))
+#             # print("*********************************")
 
-if settings.has_option('mode_4', 'dir_pairs_path'):
-    dir_result_mode2_path = settings.get('mode_4', 'dir_pairs_path')
-
-# go over all files in mode1 to get the 3p and 5p candidates
-for dirpath, dirs, files in os.walk(dir_result_mode2_path):
-    for fname in files:
-        file_name = os.path.join(dirpath,fname)
-        if file_name.endswith('.csv'):
-            # file_name = 'result_files_mode1_mir35/results_caenorhabditis_briggsae.csv'
-            print('file_name {} report counter {}'.format(file_name, counter_report(file_name)))
-            # print("*********************************")
+# file1_path = '/home/zivto/thesis/result_files_mode1_mir35/results_caenorhabditis_nigoni.csv'
+# file2_path = '/home/zivto/thesis/result_files_mode1_mir35/results_caenorhabditis_nigoni.csv'
+# organism_file1 = 'caenorhabditis_nigoni'
+# organism_file2 = 'caenorhabditis_nigoni'
+# percentile_filter_percentage = 0.01
+# value_filter = 0
+# elbow_point = True
+#
+# align_files(file1_path, file2_path, organism_file1, organism_file2, percentile_filter_percentage, value_filter,
+#                    elbow_point)

@@ -5,8 +5,11 @@ import configparser
 import RNA
 import errors
 import pandas as pd
-from subprocess import Popen
 from Bio import pairwise2
+import subprocess
+from io import StringIO
+from collections import defaultdict
+
 
 dirpath = os.getcwd()
 res = {}
@@ -56,60 +59,71 @@ def ct_file_parser_3p(ct_df, start_mature, end_mature, param):
     repair_index_end_mature = 0
     decreased_end_mature = False
     valid = True
-    while int(ct_df.loc[index_i][4]) == 0:
+    # while int(ct_df.loc[index_i][4]) == 0:
+    while ct_df.iat[index_i - 1, 4] == 0:
         index_i -= 1
         repair_index_end_mature += 1
         decreased_end_mature = True
-    start_hairpin = int(
-        ct_df.loc[index_i][4]) - 1  # file starts from index 1, so  decrease 1 for index to align with index 0
+    # start_hairpin = int(ct_df.loc[index_i][4])  # file starts from index 1, so  decrease 1 for index to align with index 0
+    ## deleted -1!!! to check if aligned
+    start_hairpin = ct_df.iat[index_i - 1,4]
+
     repair_index_start_star = repair_index_end_mature
 
     index_i = start_mature
     repair_index_start_mature = 0
     decreased_start_mature = False
-    while int(ct_df.loc[index_i][4]) == 0:
+    # while int(ct_df.loc[index_i][4]) == 0:
+    while ct_df.iat[index_i - 1, 4] == 0:
         index_i += 1
         repair_index_start_mature += 1
         decreased_start_mature = True
-    # end_star = int(ct_df.loc[index_i][4])-1  # file starts from index 1, so  decrease 1 for index to align with index 0
 
     direct = False
-    if int(ct_df.loc[start_mature - 2][4]) != 0:
-        end_star_direct = int(ct_df.loc[start_mature - 2][4]) - 1
+    #if int(ct_df.loc[start_mature - 2][4]) != 0:
+    if ct_df.iat[start_mature - 2 - 1, 4] != 0:
+        # end_star_direct = int(ct_df.loc[start_mature - 2][4]) - 1
+        end_star_direct = ct_df.iat[start_mature - 2 - 1, 4] - 1
         direct = True
     else:
-        end_star_undirect = int(
-            ct_df.loc[index_i][4]) - 1  # file starts from index 1, so  decrease 1 for index to align with index 0
-
+        # end_star_undirect = int(ct_df.loc[index_i][4])  # file starts from index 1, so  decrease 1 for index to align with index 0
+        ## deleted -1!!! to check if aligned
+        end_star_undirect = ct_df.iat[index_i - 1, 4]
     if start_hairpin > end_mature or start_hairpin > param:
         valid = False
 
     if decreased_end_mature:
+
+        #i = 0
+        # while (ct_df.loc[start_hairpin - repair_index_end_mature + 2][4] != 0):
+        #while ct_df.iat[start_hairpin - repair_index_end_mature + 2 + i - 1, 4] == 0:
+        #    i += 1
+
         if decreased_start_mature:
             if direct:
-                return {'start_hairpin': max(0, start_hairpin - repair_index_end_mature), 'end_hairpin': end_mature - 1,
-                        'start_star': max(0, start_hairpin - repair_index_start_star + 2),
+                return {'start_hairpin': max(0, start_hairpin - repair_index_end_mature) + 2, 'end_hairpin': end_mature - 1,
+                        'start_star': max(0, start_hairpin - repair_index_start_star) + 2,
                         'end_star': end_star_direct, 'valid': valid}
-            return {'start_hairpin': max(0, start_hairpin - repair_index_end_mature), 'end_hairpin': end_mature - 1,
-                    'start_star': max(0, start_hairpin - repair_index_start_star + 2),
+            return {'start_hairpin': max(0, start_hairpin - repair_index_end_mature) + 2, 'end_hairpin': end_mature - 1,
+                    'start_star': max(0, start_hairpin - repair_index_start_star) + 2,
                     'end_star': end_star_undirect + repair_index_start_mature + 2, 'valid': valid}
         if direct:
-            return {'start_hairpin': max(0, start_hairpin - repair_index_end_mature), 'end_hairpin': end_mature - 1,
+            return {'start_hairpin': max(0, start_hairpin - repair_index_end_mature) + 2, 'end_hairpin': end_mature - 1,
                     'start_star': max(0, start_hairpin - repair_index_start_star + 2),
                     'end_star': end_star_direct, 'valid': valid}
-        return {'start_hairpin': max(0, start_hairpin - repair_index_end_mature), 'end_hairpin': end_mature - 1,
+        return {'start_hairpin': max(0, start_hairpin - repair_index_end_mature) + 2, 'end_hairpin': end_mature - 1,
                 'start_star': max(0, start_hairpin - repair_index_start_star + 2),
                 'end_star': end_star_undirect + 2, 'valid': valid}
     if decreased_start_mature:
         if direct:
-            return {'start_hairpin': start_hairpin, 'end_hairpin': end_mature - 1,
-                    'start_star': max(0, start_hairpin - repair_index_start_star + 2),
+            return {'start_hairpin': start_hairpin + 2, 'end_hairpin': end_mature - 1,
+                    'start_star': max(0, start_hairpin - repair_index_start_star) + 2,
                     'end_star': end_star_direct, 'valid': valid}
-        return {'start_hairpin': start_hairpin, 'end_hairpin': end_mature - 1,
-                'start_star': max(0, start_hairpin - repair_index_start_star + 2),
+        return {'start_hairpin': start_hairpin + 2, 'end_hairpin': end_mature - 1,
+                'start_star': max(0, start_hairpin - repair_index_start_star) + 2,
                 'end_star': end_star_undirect + 2, 'valid': valid}
     if direct:
-        return {'start_hairpin': start_hairpin, 'end_hairpin': end_mature - 1, 'start_star': start_hairpin + 2,
+        return {'start_hairpin': start_hairpin + 2, 'end_hairpin': end_mature - 1, 'start_star': start_hairpin + 2,
                 'end_star': end_star_direct, 'valid': valid}
     return {'start_hairpin': start_hairpin, 'end_hairpin': end_mature - 1, 'start_star': start_hairpin + 2,
             'end_star': end_star_undirect + 2, 'valid': valid}
@@ -120,29 +134,34 @@ def ct_file_parser_5p(ct_df, start_mature, end_mature, param):
     repair_index_start_mature = 0
     increased_start_mature = False
     valid = True
-    while int(ct_df.loc[index_i][4]) == 0:
+    # while int(ct_df.loc[index_i][4]) == 0:
+    while ct_df.iat[index_i - 1, 4] == 0:
         index_i += 1
         repair_index_start_mature += 1
         increased_start_mature = True
-    end_hairpin = int(ct_df.loc[index_i][4]) - 1
+    # end_hairpin = int(ct_df.loc[index_i][4]) - 1
+    end_hairpin = ct_df.iat[index_i - 1, 4] - 1
     repair_index_end_star = repair_index_start_mature
 
     index_i = end_mature
     repair_index_end_mature = 0
     increased_end_mature = False
-    while int(ct_df.loc[index_i][4]) == 0:
+    # while int(ct_df.loc[index_i][4]) == 0:
+    while ct_df.iat[index_i - 1, 4] == 0:
         index_i -= 1
         repair_index_end_mature += 1
         increased_end_mature = True
     # start_star = int(ct_df.loc[index_i][4])-1
 
     direct = False
-    if int(ct_df.loc[end_mature - 2][4]) != 0:
-        start_star_direct = int(ct_df.loc[end_mature - 2][4]) - 1
+    # if int(ct_df.loc[end_mature - 2][4]) != 0:
+    if ct_df.iat[end_mature - 2 - 1, 4] != 0:
+        # start_star_direct = int(ct_df.loc[end_mature - 2][4]) - 1
+        start_star_direct = ct_df.iat[end_mature - 2 - 1, 4] - 1
         direct = True
     else:
-        start_star_undirect = int(
-            ct_df.loc[index_i][4]) - 1  # file starts from index 1, so  decrease 1 for index to align with index 0
+        # start_star_undirect = int(ct_df.loc[index_i][4]) - 1  # file starts from index 1, so  decrease 1 for index to align with index 0
+        start_star_undirect = ct_df.iat[index_i - 1, 4] - 1
 
     # fix problem that end of star at 5p is after the calculated end_hairpin
     if min(len(ct_df), end_hairpin + repair_index_start_mature) < min(len(ct_df),
@@ -156,29 +175,29 @@ def ct_file_parser_5p(ct_df, start_mature, end_mature, param):
         if increased_end_mature:
             if direct:
                 return {'start_hairpin': start_mature - 1,
-                        'end_hairpin': min(len(ct_df), end_hairpin + repair_index_start_mature),
+                        'end_hairpin': min(len(ct_df), end_hairpin + repair_index_start_mature) + 2,
                         'start_star': start_star_direct,
-                        'end_star': min(len(ct_df), end_hairpin + repair_index_end_star + 2), 'valid': valid}
+                        'end_star': min(len(ct_df), end_hairpin + repair_index_end_star) + 2, 'valid': valid}
             return {'start_hairpin': start_mature - 1,
                     'end_hairpin': min(len(ct_df), end_hairpin + repair_index_start_mature),
                     'start_star': start_star_undirect - repair_index_end_mature + 2,
-                    'end_star': min(len(ct_df), end_hairpin + repair_index_end_star + 2), 'valid': valid}
+                    'end_star': min(len(ct_df), end_hairpin + repair_index_end_star) + 2, 'valid': valid}
         if direct:
             return {'start_hairpin': start_mature - 1,
-                    'end_hairpin': min(len(ct_df), end_hairpin + repair_index_start_mature),
+                    'end_hairpin': min(len(ct_df), end_hairpin + repair_index_start_mature) + 2,
                     'start_star': start_star_direct,
-                    'end_star': min(len(ct_df), end_hairpin + repair_index_end_star + 2), 'valid': valid}
+                    'end_star': min(len(ct_df), end_hairpin + repair_index_end_star) + 2, 'valid': valid}
         return {'start_hairpin': start_mature - 1,
-                'end_hairpin': min(len(ct_df), end_hairpin + repair_index_start_mature),
+                'end_hairpin': min(len(ct_df), end_hairpin + repair_index_start_mature) + 2,
                 'start_star': start_star_undirect + 2,
-                'end_star': min(len(ct_df), end_hairpin + repair_index_end_star + 2), 'valid': valid}
+                'end_star': min(len(ct_df), end_hairpin + repair_index_end_star) + 2, 'valid': valid}
     if increased_end_mature:
         if direct:
             return {'start_hairpin': start_mature - 1,
-                    'end_hairpin': min(len(ct_df), end_hairpin + repair_index_start_mature),
+                    'end_hairpin': min(len(ct_df), end_hairpin + repair_index_start_mature) + 2,
                     'start_star': start_star_direct, 'end_star': end_hairpin + 2, 'valid': valid}
         return {'start_hairpin': start_mature - 1,
-                'end_hairpin': min(len(ct_df), end_hairpin + repair_index_start_mature),
+                'end_hairpin': min(len(ct_df), end_hairpin + repair_index_start_mature) + 2,
                 'start_star': start_star_undirect - repair_index_end_mature + 2, 'end_star': end_hairpin + 2,
                 'valid': valid}
     if direct:
@@ -194,16 +213,31 @@ def mature_complimentarity(mature_df):
     max_bulge = 0
     count_bulge = 0
     mature_connections = 0
+    # for row in mature_df.values:
+    #     if row[4] != 0:
+    #         if mature_df[0].iloc[0] <= row[4] <= mature_df[0].iloc[
+    #             len(mature_df) - 1]:  # check only connection outside mature
+    #             continue
+    #         mature_connections += 1
+    #
+    #         if bulge_flag:
+    #             if max_bulge < count_bulge:
+    #                 max_bulge = count_bulge
+    #             count_bulge = 0
+    #             bulge_flag = False
+    #     else:
+    #         count_bulge += 1
+    #         bulge_flag = True
+    #
+    # return mature_connections, max_bulge
+
     for row in mature_df.values:
         if row[4] != 0:
-            if mature_df[0].iloc[0] <= row[4] <= mature_df[0].iloc[
-                len(mature_df) - 1]:  # check only connection outside mature
-                continue
-            mature_connections += 1
+            if not (mature_df.iat[0, 0] <= row[4] <= mature_df.iat[-1, 0]):
+                mature_connections += 1
 
             if bulge_flag:
-                if max_bulge < count_bulge:
-                    max_bulge = count_bulge
+                max_bulge = max(max_bulge, count_bulge)
                 count_bulge = 0
                 bulge_flag = False
         else:
@@ -213,22 +247,25 @@ def mature_complimentarity(mature_df):
     return mature_connections, max_bulge
 
 
+
 def star_complimentarity(star_df):
     bulge_flag = False
     max_bulge = 0
     count_bulge = 0
     star_connections = 0
     for row in star_df.values:
-        if int(row[4]) != 0:
+        if row[4] != 0:
             # check only connection outside star
-            if star_df[0].iloc[0] <= int(row[4]) <= star_df[0].iloc[
-                len(star_df) - 1]:  # check only connection outside star
-                continue
-            star_connections += 1
+            if not (star_df.iat[0, 0] <= row[4] <= star_df.iat[-1, 0]):
+                star_connections += 1
+            # if star_df[0].iloc[0] <= int(row[4]) <= star_df[0].iloc[len(star_df) - 1]:  # check only connection outside star
+            #     continue
+            # star_connections += 1
 
             if bulge_flag:
-                if max_bulge < count_bulge:
-                    max_bulge = count_bulge
+                max_bulge = max(max_bulge, count_bulge)
+                # if max_bulge < count_bulge:
+                #     max_bulge = count_bulge
                 count_bulge = 0
                 bulge_flag = False
         else:
@@ -241,9 +278,7 @@ def star_complimentarity(star_df):
 def find_max_bulge_symmetry(mature_df):
 
     mature_i = 0
-    mature_j = 0
     star_i = 0
-    star_j = 0
     max_bulge_symmetry = 0
     seen_bulge = False
 
@@ -252,7 +287,7 @@ def find_max_bulge_symmetry(mature_df):
     for row in mature_df.values:
         if int(row[4]) == 0:
             counter += 1
-            continue
+            # continue
         else:
             break
 
@@ -287,44 +322,68 @@ def find_max_bulge_symmetry(mature_df):
     return max_bulge_symmetry
 
 
+
+# def find_loop_size_3p(ct_df, start_mature):
+#     if int(ct_df.loc[start_mature - 1][4]) != 0:
+#         start_loop = int(ct_df.loc[start_mature - 1][4]) + 2  # Overhead
+#     else:
+#         # start_loop = int(ct_df.loc[start_mature + 1][4]) + 3
+#         index = start_mature + 1
+#         repair_index = 2
+#         while int(ct_df.loc[index][4]) == 0:
+#             index += 1
+#             repair_index += 1
+#         start_loop = int(ct_df.loc[index][4]) + repair_index
+#
+#     end_loop = start_mature
+#
+#     return start_loop, end_loop
+
 def find_loop_size_3p(ct_df, start_mature):
-    if int(ct_df.loc[start_mature - 1][4]) != 0:
-        start_loop = int(ct_df.loc[start_mature - 1][4]) + 2  # Overhead
+    ct_values = ct_df.values
+    if ct_values[start_mature - 1, 4] != 0:
+        start_loop = ct_values[start_mature - 1, 4] + 2
     else:
-        # start_loop = int(ct_df.loc[start_mature + 1][4]) + 3
-        index = start_mature + 1
-        repair_index = 2
-        while int(ct_df.loc[index][4]) == 0:
-            index += 1
-            repair_index += 1
-        start_loop = int(ct_df.loc[index][4]) + repair_index
-
-    end_loop = start_mature
-
+        start_loop = ct_values[start_mature + 1:, 4][ct_values[start_mature + 1:, 4] != 0][0] + 2  # was +3
+    end_loop = start_mature - 1
     return start_loop, end_loop
 
+
+# def find_loop_size_5p(ct_df, end_mature):
+#     if int(ct_df.loc[end_mature + 1][4]) != 0:
+#         end_loop = int(ct_df.loc[end_mature + 1][4]) + 2  # Overhead
+#     else:
+#         # start_loop = int(ct_df.loc[start_mature + 1][4]) + 3
+#         index = end_mature - 1
+#         repair_index = 2
+#         while int(ct_df.loc[index][4]) == 0:
+#             index -= 1
+#             repair_index += 1
+#         end_loop = int(ct_df.loc[index][4]) - repair_index
+#
+#     start_loop = end_mature
+#
+#     return start_loop, end_loop
 
 def find_loop_size_5p(ct_df, end_mature):
-    if int(ct_df.loc[end_mature + 1][4]) != 0:
-        end_loop = int(ct_df.loc[end_mature + 1][4]) + 2  # Overhead
+    ct_values = ct_df.values
+    if ct_values[end_mature + 1, 4] != 0:
+        end_loop = ct_values[end_mature + 1, 4] + 2  # Overhead
     else:
-        # start_loop = int(ct_df.loc[start_mature + 1][4]) + 3
-        index = end_mature - 1
-        repair_index = 2
-        while int(ct_df.loc[index][4]) == 0:
-            index -= 1
-            repair_index += 1
-        end_loop = int(ct_df.loc[index][4]) - repair_index
-
-    start_loop = end_mature
-
+        end_loop = ct_values[:end_mature, 4][ct_values[:end_mature, 4] != 0][-1] - 2 # was -3
+    start_loop = end_mature + 1
     return start_loop, end_loop
 
 
+# def get_loop(ct_df, start_loop, loop_size):
+#     loop = ''
+#     for i in range(loop_size):
+#         loop += ct_df.loc[start_loop + i][1]
+#     return loop
+
 def get_loop(ct_df, start_loop, loop_size):
-    loop = ''
-    for i in range(loop_size):
-        loop += ct_df.loc[start_loop + i][1]
+    loop_chars = [ct_df.loc[start_loop + i][1] for i in range(loop_size)]
+    loop = ''.join(loop_chars)
     return loop
 
 
@@ -332,14 +391,6 @@ def find_candidates_by_seed():
     settings = configparser.ConfigParser()
     settings._interpolation = configparser.ExtendedInterpolation()
     settings.read('settings.ini')
-
-    # if settings.has_option('mode1_new', 'output_file_name'):
-    #     output_file_name = settings.get('mode1_new', 'output_file_name')
-    #     output_file_name = output_file_name.encode('ascii', 'ignore')
-    #
-    # if settings.has_option('mode1_new', 'output_path'):
-    #     output_path = settings.get('mode1_new', 'output_path')
-    #     output_path = output_path.encode('ascii', 'ignore')
 
     if settings.has_option('mode_1', 'fasta_file_path'):
         fastaFile = settings.get('mode_1', 'fasta_file_path')
@@ -351,20 +402,21 @@ def find_candidates_by_seed():
     s = seed
     s = s.replace("U", "T")
 
-    genome_size = 0
+    # genome_size = 0
+    genome_size = sum(len(record) for record in records_dict.values())
 
     for key, record in records_dict.items():
-        fasta = record.seq._data.decode('utf-8')
-        genome_size += len(fasta)
-        reverse_complement_fasta = record.seq.reverse_complement()._data.decode('utf-8')
+        # fasta = record.seq._data.decode('utf-8')
+        fasta = str(record.seq)
+        # genome_size += len(fasta)
+        reverse_complement_fasta = record.seq.reverse_complement()._data.decode('utf-8')  # str(record.seq.reverse_complement())
         strand_plus = "+"
         strand_minus = "-"
         i = find_seed_in_fasta(s, fasta, i, strand_plus, key)
         i = find_seed_in_fasta(s, reverse_complement_fasta, i, strand_minus, key)
-    print("candidates found in this phase (find_candidates_by_seed): ", str(len(res)))
+    print("candidates found in this phase (find_candidates_by_seed): ", len(res))
     print("genome_size: ", genome_size)
 
-    # return res
 
 
 # help function to create the candidates from fasta record
@@ -375,11 +427,10 @@ def find_seed_in_fasta(seed, fasta, i, strand, key):
         start = m.start() - 1  # m.start() - short_window_size
         end = m.end() + short_window_size + long_window_size
         seq = fasta[start:end].replace('T', 'U')
-        if len(seq) > 0:
+        if seq:
             if strand == "-":
-                temp = end
-                end = len_fasta - start
-                start = len_fasta - temp
+                start, end = len_fasta - end, len_fasta - start
+
             obj = {'Chr': str(key), 'Start_hairpin': str(start), 'End_hairpin': str(end), 'Strand': str(strand),
                    'Hairpin_seq': str(seq)}
             res[str(i)] = obj
@@ -388,12 +439,9 @@ def find_seed_in_fasta(seed, fasta, i, strand, key):
         start = m.start() - long_window_size
         end = m.end() + short_window_size
         seq = fasta[start:end].replace('T', 'U')
-        if len(seq) > 0:
-            # res[str(i)] = {'chr': str(key), 'start': str(start), 'end': str(end), strand: str(strand)}
+        if seq:
             if strand == "-":
-                temp = end
-                end = len_fasta - start
-                start = len_fasta - temp
+                start, end = len_fasta - end, len_fasta - start
             obj = {'Chr': str(key), 'Start_hairpin': str(start), 'End_hairpin': str(end), 'Strand': str(strand),
                    'Hairpin_seq': str(seq)}
             res[str(i)] = obj
@@ -423,10 +471,12 @@ def filter_candidates():
     if settings.has_option('mode_1', 'input_filter_parameters'):
         input_filter_parameters = settings.get('mode_1', 'input_filter_parameters')
 
-    f = open(input_filter_parameters, 'r')
-    data = f.read()
-    f.close()
-    dict_filter_params = eval(data)
+    # f = open(input_filter_parameters, 'r')
+    # data = f.read()
+    # f.close()
+    # dict_filter_params = eval(data)
+    with open(input_filter_parameters, 'r') as f:
+        dict_filter_params = eval(f.read())
 
     index = 0
 
@@ -434,9 +484,6 @@ def filter_candidates():
         if (index % 500) == 0:
             print(index)
         index += 1
-
-        # if index == 50:
-        #     break
 
         hairpin = value['Hairpin_seq']
 
@@ -452,19 +499,21 @@ def filter_candidates():
             continue
 
         # check if 3p
-        if check_if_mature_3p(hairpin, mature):
-            mature_3p = True
-            mature_5p = False
-        else:
-            mature_5p = True
-            mature_3p = False
+        # if check_if_mature_3p(hairpin, mature):
+        #     mature_3p = True
+        #     mature_5p = False
+        # else:
+        #     mature_5p = True
+        #     mature_3p = False
+        mature_3p = check_if_mature_3p(hairpin, mature)
+        mature_5p = not mature_3p
 
         finish_filter = False
 
         for window in windows:
             if mature_3p:
                 window_hairpin = hairpin[long_window_size - window:len(hairpin)]
-            if mature_5p:
+            elif mature_5p:
                 window_hairpin = hairpin[:len(hairpin) - (long_window_size - window)]
 
             if len(window_hairpin) <= len(mature):
@@ -472,18 +521,30 @@ def filter_candidates():
 
             fold = fold_candidates_by_seq(window_hairpin)
 
-            with open('ct.txt', 'w') as infile:
-                infile.write('>' + key + '\n')
-                infile.write(window_hairpin + '\n')
-                infile.write(fold)
 
-            cmd = "RNAfold --noPS ct.txt | b2ct > ct_file.ct"
-            p = Popen(cmd, shell=True)
-            p.communicate()
+            # with open('ct.txt', 'w') as infile:
+            #     infile.write(f'>{key}\n{window_hairpin}\n{fold}')
+                # infile.write('>' + key + '\n')
+                # infile.write(window_hairpin + '\n')
+                # infile.write(fold)
 
-            ct_df = pd.read_csv('ct_file.ct', delimiter='\s+', header=None, names=[0, 1, 2, 3, 4, 5])
-            ct_df = ct_df.iloc[1:]
-            ct_df.astype({4: 'int'}).dtypes
+            # cmd = "RNAfold --noPS ct.txt | b2ct > ct_file.ct"
+            # p = Popen(cmd, shell=True)
+            # p.communicate()
+
+            ct_data = f'>{key}\n{window_hairpin}\n{fold}'
+            cmd = "RNAfold --noPS | b2ct"
+            p = subprocess.run(cmd, shell=True, input=ct_data, universal_newlines=True, stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE)
+            out, err = p.stdout, p.stderr
+
+            # ct_df = pd.read_csv('ct_file.ct', delimiter='\s+', header=None, names=[0, 1, 2, 3, 4, 5])
+            ct_df = pd.read_csv(StringIO(out), delimiter='\s+', header=None, names=[0, 1, 2, 3, 4, 5])[1:]
+            # ct_df = pd.read_csv('ct_file.ct', delimiter='\s+', header=None, names=[0, 1, 2, 3, 4, 5])[1:]
+
+            # ct_df = ct_df.iloc[1:]
+            # ct_df.astype({4: 'int'}).dtypes
+            ct_df = ct_df.astype({4: 'int'})
 
             if len(ct_df) == 0:
                 continue
@@ -515,7 +576,8 @@ def filter_candidates():
             if mature_5p:
                 hairpin_boundries = ct_file_parser_5p(ct_df, start_mature, end_mature, param)
 
-            if hairpin_boundries['valid'] is False:
+            # if hairpin_boundries['valid'] is False:
+            if not hairpin_boundries['valid']:
                 continue
 
             # cut the hairpin with the new indexes
@@ -554,7 +616,7 @@ def filter_candidates():
                 'max_star_length']:
                 continue
 
-            star_df = ct_df.loc[start_star + 1:end_star + 1]
+            star_df = ct_df.loc[start_star + 1:end_star]
             star_numbers_of_connections, star_max_bulge = star_complimentarity(star_df)
             star_bp_ratio = star_numbers_of_connections / float(len(star_df))
 
@@ -563,6 +625,19 @@ def filter_candidates():
                 continue
 
             star = window_hairpin[start_star:end_star + 1]
+            max_one_mer_mature = count_kmers(mature, 1) / len(mature)
+            if float("{:.2f}".format(max_one_mer_mature)) > dict_filter_params['max_one_mer_mature']:
+                continue
+            max_two_mer_mature = count_kmers(mature, 2) / len(mature)
+            if float("{:.2f}".format(max_two_mer_mature)) > dict_filter_params['max_two_mer_mature']:
+                continue
+            max_one_mer_hairpin = count_kmers(cutted_hairpin, 1) / len(cutted_hairpin)
+            if float("{:.2f}".format(max_one_mer_hairpin)) > dict_filter_params['max_one_mer_hairpin']:
+                continue
+            max_two_mer_hairpin = count_kmers(cutted_hairpin, 2) / len(cutted_hairpin)
+            if float("{:.2f}".format(max_two_mer_hairpin)) > dict_filter_params['max_two_mer_hairpin']:
+                continue
+
             # if mature_3p:
             #     star = window_hairpin[start_star:end_star+1]
             # if mature_5p:
@@ -598,10 +673,13 @@ def filter_candidates():
 
             if mature_3p:
                 res[key]['3p/5p'] = '3p'
-                # res[key]['Mature_5p'] = ''
+                # update start and end of the hairpin
+                res[key]['Start_hairpin'] = str(int(res[key]['Start_hairpin']) + (int(res[key]['End_hairpin']) - int(res[key]['Start_hairpin']) - len(cutted_hairpin)))
             if mature_5p:
                 res[key]['3p/5p'] = '5p'
-                # res[key]['Mature_3p'] = ''
+                # update start and end of the hairpin
+                res[key]['End_hairpin'] = str(int(res[key]['End_hairpin']) - (int(res[key]['End_hairpin']) - int(res[key]['Start_hairpin']) - len(cutted_hairpin)))
+
             res[key]['Hairpin_seq_trimmed'] = cutted_hairpin
 
             res[key]['Star'] = star
@@ -615,6 +693,12 @@ def filter_candidates():
             res[key]['Window'] = window
 
             res[key]['Max_bulge_symmetry'] = max_bulge_symmetry
+
+            res[key]['Max_one_mer_mature'] = max_one_mer_mature
+            res[key]['Max_two_mer_mature'] = max_two_mer_mature
+            res[key]['Max_one_mer_hairpin'] = max_one_mer_hairpin
+            res[key]['Max_two_mer_hairpin'] = max_two_mer_hairpin
+
             # res[key]['start_mature'] = start_mature
             # res[key]['end_mature'] = end_mature
 
@@ -649,6 +733,42 @@ def check_if_mature_3p(seq, mirna):
         return False
 
 
+def count_kmers(sequence, k):
+    """Count kmer occurrences in a given sequence.
+
+    Parameters
+    ----------
+    read : string
+        A single DNA sequence.
+    k : int
+        The value of k for which to count kmers.
+
+    Returns
+    -------
+    counts : dictionary, {'string': int}
+        A dictionary of counts keyed by their individual kmers (strings
+        of length k).
+
+    """
+    # Start with an empty dictionary
+    # counts = {}
+    counts = defaultdict(int)
+
+    # Calculate how many kmers of length k there are
+    num_kmers = len(sequence) - k + 1
+    # Loop over the kmer start positions
+    for i in range(num_kmers):
+        # Slice the string to get the kmer
+        kmer = sequence[i:i+k]
+        ## Add the kmer to the dictionary if it's not there
+        # if kmer not in counts:
+        #     counts[kmer] = 0
+        # Increment the count for this kmer
+        counts[kmer] += 1
+    # Return the final counts
+    return max(counts.values())
+
+
 def collect_db_data():
     # read settings file
     settings = configparser.ConfigParser()
@@ -669,7 +789,7 @@ def collect_db_data():
 def list_db_hairpin_id(df):
     result = []
     for row_db in df.iterrows():
-        hp_id_db = row_db[1]['Hairpin_name']  # check this is hairpin-id and not hairpin_id
+        hp_id_db = row_db[1]['Hairpin_name']
 
         result.append(hp_id_db)
     return result
@@ -699,14 +819,14 @@ def found_in_DB(hairpin_res, real_db_df, relevant_hp_id_db):
             continue
 
         if row_db[1]['Hairpin_name'] in relevant_hp_id_db:
-            for i in range(0, mismatch_threshold):
+            for i in range(0, mismatch_threshold+1):
                 if alignments_best_score >= min(len(hairpin_db),
                                                 len(hairpin_res)) - i:  # we can have 3 mismatches - threshold
                     flag = True
-                    min_mismatches = i
-                    if min_mismatches < best_mismatches:
-                        best_mismatches = min_mismatches
-                        hp_id = row_db[1]['Hairpin_name']
+                    # min_mismatches = i
+                    # if min_mismatches < best_mismatches:
+                    # best_mismatches = min_mismatches
+                    hp_id = row_db[1]['Hairpin_name']
                     break
     if flag:
         if hp_id in relevant_hp_id_db:
@@ -717,11 +837,17 @@ def found_in_DB(hairpin_res, real_db_df, relevant_hp_id_db):
 def add_found_in_DB_to_res():
     real_db_df = collect_db_data()
     relevant_hp_id_db = list_db_hairpin_id(real_db_df)
+    found_counter = 0
     for key in res:
+        # if key == '3406':
+        #     print('yey')
         found = found_in_DB(res[key]['Hairpin_seq_trimmed'], real_db_df, relevant_hp_id_db)
         # print('key : {}, found_in_DB : {}, found_in_DB_id : {}'.format(key,found['found'],found['hairpin_id']))
         # res[key]['found_in_DB'] = found['found']
         res[key]['Found_in_DB_id'] = found['Hairpin_name']
+        if found['found'] == True:
+            found_counter += 1
+    print(f'TP found in mode 1: {found_counter}')
 
 
 def write_final_results_file():
@@ -914,18 +1040,18 @@ def create_html_file():
 
 
 
-## Count 5p and 3p from csv output files from mode 1
+# ## Count 5p and 3p from csv output files from mode 1
 # # read settings file
 # settings = configparser.ConfigParser()
 # settings._interpolation = configparser.ExtendedInterpolation()
 # settings.read('settings.ini')
-
+#
 # def counter_report(csv_file):
 #     df = pd.read_csv(csv_file)
 #     ser = df['3p/5p'].value_counts()
 #     return {'3p': ser['3p'], '5p': ser['5p']}
-#
-#
+
+
 # if settings.has_option('mode_4', 'dir_result_mode1_path'):
 #     dir_result_mode1_path = settings.get('mode_4', 'dir_result_mode1_path')
 #

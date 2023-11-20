@@ -20,8 +20,10 @@ settings.read('settings.ini')
 def checkIfExist(mode, organism1, organism2):
 
     if mode == 1:
-        if settings.has_option('mode_1', 'output_path'):
-            output_path = settings.get('mode_1', 'output_path')
+        # if settings.has_option('mode_1', 'output_path'):
+        #     output_path = settings.get('mode_1', 'output_path')
+        if settings.has_option('mode_4', 'dir_result_mode1_path'):
+            output_path = settings.get('mode_4', 'dir_result_mode1_path')
 
             for filename in os.listdir(output_path):
                 name = filename.split('.')[0]
@@ -33,8 +35,10 @@ def checkIfExist(mode, organism1, organism2):
             return False
 
     elif mode == 2:
-        if settings.has_option('mode_2', 'output_path'):
-            output_path = settings.get('mode_2', 'output_path')
+        # if settings.has_option('mode_2', 'output_path'):
+        #     output_path = settings.get('mode_2', 'output_path')
+        if settings.has_option('mode_4', 'dir_pairs_path'):
+            output_path = settings.get('mode_4', 'dir_pairs_path')
             for filename in os.listdir(output_path):
                 name1 = filename.split(',')[0]
                 name2 = filename.split(',')[1].split('.')[0]
@@ -79,7 +83,7 @@ def generate_mode1(organism_name_in_db):
     print("energy :", len(mode_1.res))
 
     mode_1.add_found_in_DB_to_res()
-    print("TP :", len(mode_1.res))
+    print("Toal found in mode 1 :", len(mode_1.res))
 
     print("writing final results files")
     mode_1.write_final_results_file()
@@ -123,8 +127,8 @@ def generate_mode2():
         mode_2.find_number_of_orgs(file1_path, file2_path, organism_file1, organism_file2)
 
         elapsed = (time.clock() - start)
-        print("Program executed in " + str(elapsed))
-        print("finish running mode 2")
+        # print("Program executed in " + str(elapsed))
+        # print("finish running mode 2")
     except:
         print(errors.errorMessage('general_error'))
         print(sys.exc_info()[1])
@@ -179,8 +183,8 @@ def pipe():
             print("organism_name_in_db : " + organism_name_in_db)
 
             # Call mode 1 with new info
-            # generate_mode1(organism_name_in_db)
-
+            generate_mode1(organism_name_in_db)
+            break
         if settings.has_option('mode_1', 'output_path'):
             output_mode1_path = settings.get('mode_1', 'output_path')
         if settings.has_option('mode_4', 'dir_result_mode1_path'):
@@ -189,6 +193,7 @@ def pipe():
         # Go over all possible couples of organisms from result files to generate MODE_2
         i = 0
         while i < len(organism):
+            print('***********************************************')
             j = i
             while j < len(organism):
                 # if (organism[i] == 'heligmosomoides_polygyrus' and organism[j] == 'haemonchus_contortus') or (organism[j] == 'heligmosomoides_polygyrus' and organism[i] == 'haemonchus_contortus'):
@@ -210,6 +215,7 @@ def pipe():
                         settings.write(settingFile)
                 # Call mode 2
                 generate_mode2()
+
                 j += 1
             i += 1
 
